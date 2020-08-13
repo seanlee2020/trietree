@@ -16,10 +16,10 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 	q3 := "harry potter book"
 	q4 := "harry potter movie"
 
-	trie.Insert(q1)
-	trie.Insert(q2)
-	trie.Insert(q3)
-	trie.Insert(q4)
+	trie.Insert(q1, 100, 30, 100)
+	trie.Insert(q2, 9, 20, 200)
+	trie.Insert(q3, 40, 50, 100)
+	trie.Insert(q4, 60, 100, 300)
 
 	node2 := trie.Get(q2)
 
@@ -28,4 +28,20 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 	}
 	children := trie.GetChildren(q2)
 	fmt.Print("size of children is", len(children))
+
+	var nodeList = []*TrieNode{}
+
+	for _, node := range children {
+		nodeList = append(nodeList, node)
+	}
+
+	fmt.Print("\nsize of nodeList is", len(nodeList))
+
+	for idx, node := range nodeList {
+
+		fmt.Print("\nidx=", idx)
+		fmt.Print("\nnode.token=", node.token)
+
+	}
+
 }

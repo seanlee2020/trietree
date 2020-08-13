@@ -46,7 +46,7 @@ func (trieTree *TrieTree) GetChildren(query string) map[string]*TrieNode {
 	return nil
 }
 
-func (trieTree *TrieTree) Insert(query string) {
+func (trieTree *TrieTree) Insert(query string, nu int, ns int, nh int) {
 	if empty(query) {
 		return
 	}
@@ -59,12 +59,16 @@ func (trieTree *TrieTree) Insert(query string) {
 			curNode.children = make(map[string]*TrieNode)
 		}
 		if curNode.getChildren()[token] == nil {
-			curNode.children[token] = NewTrieNode()
+			newNode := NewTrieNode()
+			newNode.token = token
+			curNode.children[token] = newNode
 		}
 		curNode = curNode.children[token]
-
 		if idx == len(tokens)-1 {
 			curNode.endQ = true
+			curNode.numUsers = nu
+			curNode.numSessions = ns
+			curNode.numHits = nh
 		}
 	}
 }
