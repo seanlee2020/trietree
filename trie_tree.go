@@ -1,6 +1,13 @@
 package trie
 
-import "strings"
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+)
 
 // QueryTrie is a trie of runes with string keys and interface{} values.
 // Note that internal nodes have nil values so a stored nil value will not
@@ -44,6 +51,37 @@ func (trieTree *TrieTree) GetChildren(query string) map[string]*TrieNode {
 		return trieNode.getChildren()
 	}
 	return nil
+}
+
+func (trieTree *TrieTree) loadData(dataFile string) {
+	file, err := os.Open(dataFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	head := true
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !head {
+			fmt.Println(line)
+			fields := strings.Split(line, ",")
+			query := fields[0]
+			nu, _ := strconv.Atoi(fields[1])
+			ns, _ := strconv.Atoi(fields[2])
+			nh := 100
+			trieTree.Insert(query, nu, ns, nh)
+		} else {
+			head = false
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 func (trieTree *TrieTree) Insert(query string, nu int, ns int, nh int) {

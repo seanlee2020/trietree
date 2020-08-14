@@ -9,6 +9,15 @@ import (
 func TestTrieTree(t *testing.T) {
 	trie := NewTrieTree()
 	testTrieTree(t, trie)
+
+}
+
+func TestTrieTreeFromDataFile(t *testing.T) {
+	trie := NewTrieTree()
+
+	trie.loadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv")
+	testTrieTree(t, trie)
+
 }
 
 func testTrieTree(t *testing.T, trie *TrieTree) {
@@ -19,6 +28,7 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 	q5 := "harry potter author"
 
 	trie.Insert(q5, 6, 10, 30)
+
 	trie.Insert(q1, 100, 30, 100)
 	trie.Insert(q2, 9, 20, 200)
 	trie.Insert(q3, 40, 50, 100)
@@ -35,7 +45,9 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 	var nodeList = []*TrieNode{}
 
 	for _, node := range children {
-		nodeList = append(nodeList, node)
+		if node.endQ {
+			nodeList = append(nodeList, node)
+		}
 	}
 
 	fmt.Print("\nsize of nodeList is", len(nodeList))
