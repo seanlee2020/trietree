@@ -1,12 +1,12 @@
 package trie
 
 type TrieNode struct {
-	token       string
+	Token       string
 	children    map[string]*TrieNode
 	isLeaf      bool
-	endQ        bool
-	numUsers    int
-	numSessions int
+	EndQ        bool
+	NumUsers    int
+	NumSessions int
 	numHits     int
 	reverse     bool
 }

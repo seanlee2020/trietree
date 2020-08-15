@@ -53,7 +53,7 @@ func (trieTree *TrieTree) GetChildren(query string) map[string]*TrieNode {
 	return nil
 }
 
-func (trieTree *TrieTree) loadData(dataFile string) {
+func (trieTree *TrieTree) LoadData(dataFile string) {
 	file, err := os.Open(dataFile)
 	if err != nil {
 		log.Fatal(err)
@@ -63,10 +63,14 @@ func (trieTree *TrieTree) loadData(dataFile string) {
 	scanner := bufio.NewScanner(file)
 
 	head := true
+	count := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !head {
-			fmt.Println(line)
+			if count%10000 == 0 {
+				fmt.Println(line)
+			}
+			count++
 			fields := strings.Split(line, ",")
 			query := fields[0]
 			nu, _ := strconv.Atoi(fields[1])
@@ -98,14 +102,14 @@ func (trieTree *TrieTree) Insert(query string, nu int, ns int, nh int) {
 		}
 		if curNode.getChildren()[token] == nil {
 			newNode := NewTrieNode()
-			newNode.token = token
+			newNode.Token = token
 			curNode.children[token] = newNode
 		}
 		curNode = curNode.children[token]
 		if idx == len(tokens)-1 {
-			curNode.endQ = true
-			curNode.numUsers = nu
-			curNode.numSessions = ns
+			curNode.EndQ = true
+			curNode.NumUsers = nu
+			curNode.NumSessions = ns
 			curNode.numHits = nh
 		}
 	}

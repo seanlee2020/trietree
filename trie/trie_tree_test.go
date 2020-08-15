@@ -15,7 +15,7 @@ func TestTrieTree(t *testing.T) {
 func TestTrieTreeFromDataFile(t *testing.T) {
 	trie := NewTrieTree()
 
-	trie.loadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv")
+	trie.LoadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv")
 	testTrieTree(t, trie)
 
 }
@@ -45,7 +45,7 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 	var nodeList = []*TrieNode{}
 
 	for _, node := range children {
-		if node.endQ {
+		if node.EndQ {
 			nodeList = append(nodeList, node)
 		}
 	}
@@ -54,14 +54,14 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 
 	for idx, node := range nodeList {
 		fmt.Print("\nidx=", idx)
-		fmt.Print("\nnode.token=", node.token)
+		fmt.Print("\nnode.token=", node.Token)
 	}
 
 	sortNodes(nodeList)
 
 	for idx, node := range nodeList {
 		fmt.Print("\nidx=", idx)
-		fmt.Print("\nnode.token=", node.token)
+		fmt.Print("\nnode.token=", node.Token)
 	}
 
 }
@@ -69,8 +69,8 @@ func testTrieTree(t *testing.T, trie *TrieTree) {
 func sortNodes(nodeList []*TrieNode) {
 	sort.SliceStable(nodeList, func(i, j int) bool {
 		nodeI, nodeJ := nodeList[i], nodeList[j]
-		scoreI := nodeI.numUsers*10 + nodeI.numSessions*3
-		scoreJ := nodeJ.numUsers*10 + nodeJ.numSessions*3
+		scoreI := nodeI.NumUsers*10 + nodeI.NumSessions*3
+		scoreJ := nodeJ.NumUsers*10 + nodeJ.NumSessions*3
 		return scoreI > scoreJ
 	})
 
