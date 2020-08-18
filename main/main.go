@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/seanlee2020/trietree/trie"
 	"net/http"
@@ -16,51 +16,62 @@ func init() {
 
 func main() {
 
-	/*
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
-		})
-		log.Println("listening on port 8088")
-		log.Fatal(http.ListenAndServe(":8088", nil))
-	*/
-
 	r := mux.NewRouter()
-	r.HandleFunc("/pills/{query}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		q := vars["query"]
 
-		//fmt.Fprintf(w, "You've requested the book: %s on page %s\n", title, page)
+	r.HandleFunc("/searchpills", processPills)
 
-		children := QueryTrie.GetChildren(q)
+	http.ListenAndServe(":8088", r)
+}
 
-		fmt.Fprint(w, "size of children is", len(children))
+//mem var need to be epxorted ( fist char upper cased)
+type Pill struct {
+	Token       string
+	Query       string
+	NumUsers    int `json:",omitempty"`
+	NumSessions int `json:",omitempty"`
+}
 
-		var nodeList = []*trie.TrieNode{}
+func processPills(w http.ResponseWriter, r *http.Request) {
+	reqParams := r.URL.Query()
+	//fmt.Fprintln(w, "reqParams", reqParams)
 
-		for _, node := range children {
-			if node.EndQ {
-				nodeList = append(nodeList, node)
-			}
+	q := reqParams["query"][0]
+
+	children := QueryTrie.GetChildren(q)
+
+	var nodeList = []*trie.TrieNode{}
+
+	for _, node := range children {
+		if node.EndQ {
+			nodeList = append(nodeList, node)
 		}
+	}
+	//fmt.Fprint(w, "\nsize of nodeList is", len(nodeList))
+	sortNodes(nodeList)
 
-		fmt.Fprint(w, "\nsize of nodeList is", len(nodeList))
+	var pillList = []*Pill{}
 
-		/*
-			for idx, node := range nodeList {
-				fmt.Fprint(w,"\nidx=", idx)
-				fmt.Fprint(w,"\nnode.token=", node.Token)
-			}*/
+	for _, node := range nodeList {
+		pill := new(Pill)
+		pill.Token = node.Token
+		pill.Query = q + " " + pill.Token
+		pillList = append(pillList, pill)
 
-		sortNodes(nodeList)
+		/*fmt.Fprint(w, "\nidx=", idx)
+		fmt.Fprint(w, "\nnode.token=", node.Token)
+		fmt.Fprint(w, "\npill.query=", pill.Query)
+		*/
+	}
 
-		for idx, node := range nodeList {
-			fmt.Fprint(w, "\nidx=", idx)
-			fmt.Fprint(w, "\nnode.token=", node.Token)
-		}
+	js, err := json.Marshal(pillList)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	})
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 
-	http.ListenAndServe(":80", r)
 }
 
 func InitTrie() *trie.TrieTree {
