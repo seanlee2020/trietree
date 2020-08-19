@@ -6,6 +6,7 @@ import (
 	"github.com/seanlee2020/trietree/trie"
 	"net/http"
 	"sort"
+	"strings"
 )
 
 var QueryTrie *trie.TrieTree
@@ -37,6 +38,18 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 
 	q := reqParams["query"][0]
 
+	explain := false
+
+	if reqParams["explain"] != nil && len(reqParams["explain"]) == 1 && strings.EqualFold(reqParams["explain"][0], "true") {
+		explain = true
+	}
+
+	de := false
+
+	if reqParams["de"] != nil && len(reqParams["de"]) == 1 && strings.EqualFold(reqParams["de"][0], "true") {
+		de = true
+	}
+
 	children := QueryTrie.GetChildren(q)
 
 	var nodeList = []*trie.TrieNode{}
@@ -47,14 +60,27 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	//fmt.Fprint(w, "\nsize of nodeList is", len(nodeList))
-	sortNodes(nodeList)
+
+	newNodeList := nodeList
+	if de {
+		sortNodesByAlphabetic(newNodeList)
+		newNodeList = duplicateRemoval(newNodeList)
+		sortNodesByPopularity(newNodeList)
+	} else {
+		sortNodesByPopularity(newNodeList)
+	}
 
 	var pillList = []*Pill{}
 
-	for _, node := range nodeList {
+	for _, node := range newNodeList {
 		pill := new(Pill)
 		pill.Token = node.Token
 		pill.Query = q + " " + pill.Token
+
+		if explain {
+			pill.NumUsers = node.NumUsers
+			pill.NumSessions = node.NumSessions
+		}
 		pillList = append(pillList, pill)
 
 		/*fmt.Fprint(w, "\nidx=", idx)
@@ -83,12 +109,69 @@ func InitTrie() *trie.TrieTree {
 
 }
 
-func sortNodes(nodeList []*trie.TrieNode) {
-	sort.SliceStable(nodeList, func(i, j int) bool {
-		nodeI, nodeJ := nodeList[i], nodeList[j]
-		scoreI := nodeI.NumUsers*10 + nodeI.NumSessions*3
-		scoreJ := nodeJ.NumUsers*10 + nodeJ.NumSessions*3
+func sortNodesByPopularity(nl []*trie.TrieNode) {
+	sort.SliceStable(nl, func(i, j int) bool {
+		nodeI, nodeJ := nl[i], nl[j]
+		scoreI := getScore(nodeI)
+		scoreJ := getScore(nodeJ)
 		return scoreI > scoreJ
 	})
+}
 
+func sortNodesByAlphabetic(nl []*trie.TrieNode) {
+	sort.SliceStable(nl, func(i, j int) bool {
+		nodeI, nodeJ := nl[i], nl[j]
+		return nodeI.Token < nodeJ.Token
+	})
+}
+
+/*
+select one node from clusters as
+[book, books]
+[classic, classical, lassics]
+*/
+func duplicateRemoval(nodeList []*trie.TrieNode) []*trie.TrieNode {
+
+	var newNodeList = []*trie.TrieNode{}
+	preNode := nodeList[0]
+	idx := 1
+	for idx < len(nodeList) {
+		node := nodeList[idx]
+
+		//nextNode := nodeList[idx+1]
+		//nextNode = nil
+
+		if len(node.Token) <= (len(preNode.Token)+2) && len(node.Token) > len(preNode.Token) && node.Token[:len(preNode.Token)] == preNode.Token {
+			winner := selectWinner(preNode, node)
+			newNodeList = append(newNodeList, winner)
+
+			if idx+1 >= len(nodeList) {
+				break
+			}
+			preNode = nodeList[idx+1]
+			idx += 2
+		} else {
+			newNodeList = append(newNodeList, preNode)
+			preNode = node
+
+			idx += 1
+		}
+	}
+	return newNodeList
+}
+
+func selectWinner(nodeA *trie.TrieNode, nodeB *trie.TrieNode) *trie.TrieNode {
+	scoreA := getScore(nodeA)
+	scoreB := getScore(nodeB)
+
+	if scoreA >= scoreB {
+		return nodeA
+	} else {
+		return nodeB
+	}
+}
+
+func getScore(node *trie.TrieNode) int {
+	score := node.NumUsers*10 + node.NumSessions*3
+	return score
 }
