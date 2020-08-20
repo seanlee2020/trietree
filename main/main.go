@@ -83,10 +83,6 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 		}
 		pillList = append(pillList, pill)
 
-		/*fmt.Fprint(w, "\nidx=", idx)
-		fmt.Fprint(w, "\nnode.token=", node.Token)
-		fmt.Fprint(w, "\npill.query=", pill.Query)
-		*/
 	}
 
 	js, err := json.Marshal(pillList)
@@ -141,15 +137,30 @@ func duplicateRemoval(nodeList []*trie.TrieNode) []*trie.TrieNode {
 		//nextNode := nodeList[idx+1]
 		//nextNode = nil
 
-		if len(node.Token) <= (len(preNode.Token)+2) && len(node.Token) > len(preNode.Token) && node.Token[:len(preNode.Token)] == preNode.Token {
+		//if len(node.Token) <= (len(preNode.Token)+2) && len(node.Token) > len(preNode.Token) && node.Token[:len(preNode.Token)] == preNode.Token {
+		if containsAndSimilar(node.Token, preNode.Token) {
 			winner := selectWinner(preNode, node)
+
+			j := idx + 1
+			for j < len(nodeList) {
+				node := nodeList[j]
+				//if len(node.Token) <= (len(preNode.Token)+2) && len(node.Token) > len(preNode.Token) && node.Token[:len(preNode.Token)] == preNode.Token {
+				if containsAndSimilar(node.Token, preNode.Token) {
+					winner = selectWinner(winner, node)
+				} else {
+					break
+				}
+
+				j++
+			}
 			newNodeList = append(newNodeList, winner)
 
-			if idx+1 >= len(nodeList) {
+			if j >= len(nodeList) {
 				break
 			}
-			preNode = nodeList[idx+1]
-			idx += 2
+
+			preNode = nodeList[j]
+			idx = j + 1
 		} else {
 			newNodeList = append(newNodeList, preNode)
 			preNode = node
@@ -174,4 +185,13 @@ func selectWinner(nodeA *trie.TrieNode, nodeB *trie.TrieNode) *trie.TrieNode {
 func getScore(node *trie.TrieNode) int {
 	score := node.NumUsers*10 + node.NumSessions*3
 	return score
+}
+
+func containsAndSimilar(tokenA string, tokenB string) bool {
+
+	if len(tokenA) <= (len(tokenB)+2) && len(tokenA) > len(tokenB) && tokenA[:len(tokenB)] == tokenB {
+		return true
+	}
+	return false
+
 }
