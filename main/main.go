@@ -1,17 +1,24 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/seanlee2020/trietree/trie"
+	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 )
 
 var QueryTrie *trie.TrieTree
 
+var BlockList map[string]bool
+
 func init() {
+	BlockList = InitBockList()
 	QueryTrie = InitTrie()
 }
 
@@ -61,7 +68,7 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 	}
 	//fmt.Fprint(w, "\nsize of nodeList is", len(nodeList))
 
-	newNodeList := nodeList
+	newNodeList := removeBlockedQ(nodeList, q)
 	if de {
 		sortNodesByAlphabetic(newNodeList)
 		newNodeList = duplicateRemoval(newNodeList)
@@ -96,6 +103,41 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func InitBockList() map[string]bool {
+
+	blockList := make(map[string]bool)
+
+	dataFile := "/Users/seanl/data/search_browse/blocklist.csv"
+
+	file, err := os.Open(dataFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	head := true
+	count := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if head {
+			head = false
+			continue
+		} else {
+			if count%10000 == 0 {
+				fmt.Println(line)
+			}
+			fields := strings.Split(line, ",")
+			query := fields[0]
+			blockList[query] = true
+			count++
+		}
+	}
+
+	return blockList
+}
+
 func InitTrie() *trie.TrieTree {
 
 	tt := trie.NewTrieTree()
@@ -121,6 +163,20 @@ func sortNodesByAlphabetic(nl []*trie.TrieNode) {
 	})
 }
 
+func removeBlockedQ(nl []*trie.TrieNode, query string) []*trie.TrieNode {
+	var newNodeList = []*trie.TrieNode{}
+
+	for _, node := range nl {
+
+		q := query + " " + node.Token
+		if !BlockList[q] && !BlockList[node.Token] && !BlockList[query] {
+			newNodeList = append(newNodeList, node)
+		}
+	}
+	return newNodeList
+
+}
+
 /*
 select one node from clusters as
 [book, books]
@@ -129,6 +185,9 @@ select one node from clusters as
 func duplicateRemoval(nodeList []*trie.TrieNode) []*trie.TrieNode {
 
 	var newNodeList = []*trie.TrieNode{}
+	if len(nodeList) == 0 {
+		return nodeList
+	}
 	preNode := nodeList[0]
 	idx := 1
 	for idx < len(nodeList) {
