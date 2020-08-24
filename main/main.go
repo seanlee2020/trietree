@@ -87,6 +87,7 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 	if de {
 		sortNodesByAlphabetic(newNodeList)
 		newNodeList = duplicateRemoval(newNodeList)
+		newNodeList = duplicateRemovalOrdering(newNodeList)
 		sortNodesByPopularity(newNodeList)
 	} else {
 		sortNodesByPopularity(newNodeList)
@@ -102,13 +103,11 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 		} else {
 			pill.Query = pill.Token + " " + q
 		}
-
 		if explain {
 			pill.NumUsers = node.NumUsers
 			pill.NumSessions = node.NumSessions
 		}
 		pillList = append(pillList, pill)
-
 	}
 
 	js, err := json.Marshal(pillList)
@@ -255,6 +254,38 @@ func duplicateRemoval(nodeList []*trie.TrieNode) []*trie.TrieNode {
 		}
 	}
 	return newNodeList
+}
+
+func duplicateRemovalOrdering(nodeList []*trie.TrieNode) []*trie.TrieNode {
+	var newNodeList = []*trie.TrieNode{}
+	if len(nodeList) == 0 {
+		return nodeList
+	}
+	token2Nodes := make(map[string][]*trie.TrieNode)
+	for _, node := range nodeList {
+		if token2Nodes[node.Token] == nil {
+			list := []*trie.TrieNode{}
+			token2Nodes[node.Token] = list
+		}
+		token2Nodes[node.Token] = append(token2Nodes[node.Token], node)
+	}
+
+	for _, val := range token2Nodes {
+
+		if len(val) == 1 {
+			newNodeList = append(newNodeList, val[0])
+		} else {
+			score0 := getScore(val[0])
+			score1 := getScore(val[1])
+			if score0 > score1 {
+				newNodeList = append(newNodeList, val[0])
+			} else {
+				newNodeList = append(newNodeList, val[1])
+			}
+		}
+	}
+	return newNodeList
+
 }
 
 func selectWinner(nodeA *trie.TrieNode, nodeB *trie.TrieNode) *trie.TrieNode {
