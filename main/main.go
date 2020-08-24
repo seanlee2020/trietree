@@ -14,12 +14,14 @@ import (
 )
 
 var QueryTrie *trie.TrieTree
+var ReverseQueryTrie *trie.TrieTree
 
 var BlockList map[string]bool
 
 func init() {
 	BlockList = InitBockList()
 	QueryTrie = InitTrie()
+	ReverseQueryTrie = InitReverseTrie()
 }
 
 func main() {
@@ -66,9 +68,22 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 			nodeList = append(nodeList, node)
 		}
 	}
+
+	revertedQ := revertQuery(q)
+	reverseChildren := ReverseQueryTrie.GetChildren(revertedQ)
+	var reverseNodeList = []*trie.TrieNode{}
+	for _, node := range reverseChildren {
+		if node.EndQ {
+			node.Reverse = true
+			reverseNodeList = append(reverseNodeList, node)
+		}
+	}
+
 	//fmt.Fprint(w, "\nsize of nodeList is", len(nodeList))
 
 	newNodeList := removeBlockedQ(nodeList, q)
+	reverseNewNodeList := removeBlockedQ(reverseNodeList, q)
+	newNodeList = append(newNodeList, reverseNewNodeList...)
 	if de {
 		sortNodesByAlphabetic(newNodeList)
 		newNodeList = duplicateRemoval(newNodeList)
@@ -82,7 +97,11 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 	for _, node := range newNodeList {
 		pill := new(Pill)
 		pill.Token = node.Token
-		pill.Query = q + " " + pill.Token
+		if !node.Reverse {
+			pill.Query = q + " " + pill.Token
+		} else {
+			pill.Query = pill.Token + " " + q
+		}
 
 		if explain {
 			pill.NumUsers = node.NumUsers
@@ -142,7 +161,15 @@ func InitTrie() *trie.TrieTree {
 
 	tt := trie.NewTrieTree()
 
-	tt.LoadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv")
+	tt.LoadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv", false)
+	return tt
+
+}
+
+func InitReverseTrie() *trie.TrieTree {
+
+	tt := trie.NewTrieTree()
+	tt.LoadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv", true)
 	return tt
 
 }
@@ -253,4 +280,15 @@ func containsAndSimilar(tokenA string, tokenB string) bool {
 	}
 	return false
 
+}
+
+func revertQuery(query string) string {
+	tokens := strings.Fields(query)
+	idx := len(tokens) - 1
+	ret := tokens[idx]
+	idx--
+	for idx >= 0 {
+		ret += " " + tokens[idx]
+	}
+	return ret
 }

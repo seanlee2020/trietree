@@ -7,8 +7,8 @@ type TrieNode struct {
 	EndQ        bool
 	NumUsers    int
 	NumSessions int
-	numHits     int
-	reverse     bool
+	NumHits     int
+	Reverse     bool
 }
 
 // NewTrieNode allocates and returns a new *TrieNode.
