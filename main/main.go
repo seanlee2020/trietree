@@ -10,11 +10,18 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 var QueryTrie *trie.TrieTree
 var ReverseQueryTrie *trie.TrieTree
+
+var QueryTrieV2 *trie.TrieTree
+var ReverseQueryTrieV2 *trie.TrieTree
+
+var QueryTrieV3 *trie.TrieTree
+var ReverseQueryTrieV3 *trie.TrieTree
 
 var BlockList map[string]bool
 
@@ -22,6 +29,11 @@ func init() {
 	BlockList = InitBockList()
 	QueryTrie = InitTrie()
 	ReverseQueryTrie = InitReverseTrie()
+	QueryTrieV2 = InitTrieV2()
+	ReverseQueryTrieV2 = InitReverseTrieV2()
+
+	QueryTrieV3 = InitTrieV3()
+	ReverseQueryTrieV3 = InitReverseTrieV3()
 }
 
 func main() {
@@ -39,6 +51,7 @@ type Pill struct {
 	Query       string
 	NumUsers    int `json:",omitempty"`
 	NumSessions int `json:",omitempty"`
+	Traffic     int `json:",omitempty"`
 }
 
 func processPills(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +72,21 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 		de = true
 	}
 
+	version := 1
+	if reqParams["version"] != nil && len(reqParams["version"]) == 1 && strings.EqualFold(reqParams["version"][0], "2") {
+		version = 2
+	}
+
+	size := 30
+	if reqParams["size"] != nil {
+		size, _ = strconv.Atoi(reqParams["size"][0])
+	}
+	print(size)
+
 	children := QueryTrie.GetChildren(q)
+	if version == 2 {
+		children = QueryTrieV2.GetChildren(q)
+	}
 
 	var nodeList = []*trie.TrieNode{}
 
@@ -71,6 +98,10 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 
 	revertedQ := revertQuery(q)
 	reverseChildren := ReverseQueryTrie.GetChildren(revertedQ)
+	if version == 2 {
+		reverseChildren = ReverseQueryTrieV2.GetChildren(revertedQ)
+	}
+
 	var reverseNodeList = []*trie.TrieNode{}
 	for _, node := range reverseChildren {
 		if node.EndQ {
@@ -95,6 +126,7 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 
 	var pillList = []*Pill{}
 
+	count := 0
 	for _, node := range newNodeList {
 		pill := new(Pill)
 		pill.Token = node.Token
@@ -106,8 +138,13 @@ func processPills(w http.ResponseWriter, r *http.Request) {
 		if explain {
 			pill.NumUsers = node.NumUsers
 			pill.NumSessions = node.NumSessions
+			pill.Traffic = node.Traffic
+		}
+		if count > size {
+			break
 		}
 		pillList = append(pillList, pill)
+		count++
 	}
 
 	js, err := json.Marshal(pillList)
@@ -125,7 +162,7 @@ func InitBockList() map[string]bool {
 
 	blockList := make(map[string]bool)
 
-	dataFile := "/Users/seanl/data/search_browse/blocklist.csv"
+	dataFile := "/opt/data/searchpills/blocklist.csv"
 
 	file, err := os.Open(dataFile)
 	if err != nil {
@@ -160,7 +197,7 @@ func InitTrie() *trie.TrieTree {
 
 	tt := trie.NewTrieTree()
 
-	tt.LoadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv", false)
+	tt.LoadData("/opt/data/searchpills/queries_nu_ns_nuser_2_nsession_2.csv", false)
 	return tt
 
 }
@@ -168,7 +205,41 @@ func InitTrie() *trie.TrieTree {
 func InitReverseTrie() *trie.TrieTree {
 
 	tt := trie.NewTrieTree()
-	tt.LoadData("/Users/seanl/data/search_browse/queries_nu_ns_nuser_2_nsession_2.csv", true)
+	tt.LoadData("/opt/data/searchpills/queries_nu_ns_nuser_2_nsession_2.csv", true)
+	return tt
+
+}
+
+func InitTrieV2() *trie.TrieTree {
+
+	tt := trie.NewTrieTree()
+
+	tt.LoadData("/opt/data/searchpills/search_term_traffic_gt2_one_year.csv", false)
+	return tt
+
+}
+
+func InitReverseTrieV2() *trie.TrieTree {
+
+	tt := trie.NewTrieTree()
+	tt.LoadData("/opt/data/searchpills/search_term_traffic_gt2_one_year.csv", true)
+	return tt
+
+}
+
+func InitTrieV3() *trie.TrieTree {
+
+	tt := trie.NewTrieTree()
+
+	tt.LoadData("/opt/data/searchpills/search-pills-queries_uc15.csv", false)
+	return tt
+
+}
+
+func InitReverseTrieV3() *trie.TrieTree {
+
+	tt := trie.NewTrieTree()
+	tt.LoadData("/opt/data/searchpills/search-pills-queries_uc15.csv", true)
 	return tt
 
 }
@@ -300,7 +371,7 @@ func selectWinner(nodeA *trie.TrieNode, nodeB *trie.TrieNode) *trie.TrieNode {
 }
 
 func getScore(node *trie.TrieNode) int {
-	score := node.NumUsers*10 + node.NumSessions*3
+	score := node.NumUsers*10 + node.NumSessions*3 + node.Traffic
 	return score
 }
 
@@ -320,6 +391,7 @@ func revertQuery(query string) string {
 	idx--
 	for idx >= 0 {
 		ret += " " + tokens[idx]
+		idx--
 	}
 	return ret
 }

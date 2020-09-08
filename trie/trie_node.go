@@ -8,6 +8,7 @@ type TrieNode struct {
 	NumUsers    int
 	NumSessions int
 	NumHits     int
+	Traffic     int
 	Reverse     bool
 }
 

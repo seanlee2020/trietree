@@ -72,15 +72,25 @@ func (trieTree *TrieTree) LoadData(dataFile string, reverse bool) {
 			}
 			count++
 			fields := strings.Split(line, ",")
-			query := fields[0]
-			nu, _ := strconv.Atoi(fields[1])
-			ns, _ := strconv.Atoi(fields[2])
-			nh := 100
+			query := strings.ToLower(fields[0])
+			nu := 0
+			ns := 0
+			nt := 0
+			if len(fields) == 3 {
+				tmpnu, _ := strconv.Atoi(fields[1])
+				tmpns, _ := strconv.Atoi(fields[2])
+				nu = tmpnu
+				ns = tmpns
+			} else if len(fields) == 2 {
+				tmpnt, _ := strconv.Atoi(fields[1])
+				nt = tmpnt
+			}
+			nh := 0
 			if !reverse {
-				trieTree.Insert(query, nu, ns, nh)
+				trieTree.Insert(query, nu, ns, nh, nt)
 			} else {
 				revertedQuery := revertQuery(query)
-				trieTree.Insert(revertedQuery, nu, ns, nh)
+				trieTree.Insert(revertedQuery, nu, ns, nh, nt)
 			}
 		} else {
 			head = false
@@ -105,7 +115,7 @@ func revertQuery(query string) string {
 	return ret
 }
 
-func (trieTree *TrieTree) Insert(query string, nu int, ns int, nh int) {
+func (trieTree *TrieTree) Insert(query string, nu int, ns int, nh int, nt int) {
 	if empty(query) {
 		return
 	}
@@ -128,6 +138,7 @@ func (trieTree *TrieTree) Insert(query string, nu int, ns int, nh int) {
 			curNode.NumUsers = nu
 			curNode.NumSessions = ns
 			curNode.NumHits = nh
+			curNode.Traffic = nt
 		}
 	}
 }
